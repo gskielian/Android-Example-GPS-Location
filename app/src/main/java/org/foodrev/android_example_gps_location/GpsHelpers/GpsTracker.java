@@ -14,7 +14,7 @@ public class GpsTracker {
 
     public static GpsTracker getInstance() {
         if(mGpsTracker == null) {
-            mGpsTracker = new GpsTracker()
+            mGpsTracker = new GpsTracker();
         }
         return mGpsTracker;
     }
