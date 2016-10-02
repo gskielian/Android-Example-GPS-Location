@@ -3,7 +3,7 @@ apply plugin: 'com.android.application'
 
 def getMyApiKey(String property){
     Properties properties = new Properties()
-    properties.load(new FileInputStream("./keys/foodrev-gmaps-api-android.txt"))
+    properties.load(new FileInputStream("./keys/foodrev-google-api-keys.txt"))
     return "\"" + properties.getProperty(property) +"\""
 }
 
@@ -24,9 +24,8 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
-A            //return a MY API KEY from a properties file.
-
-
+            //get api specified api key from api key file
+            buildConfigField "String", "GOOGLE_MAPS_API_KEY", getMyApiKey("gmaps_api_key")
         }
     }
 
