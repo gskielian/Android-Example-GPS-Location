@@ -23,7 +23,7 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
-            buildConfigField "String", "MY_API_KEY", getMyApiKey("myApiKey")
+            buildConfigField "String", "MY_API_KEY", getMyApiKey("GOOGLE_MAPS_API_KEY")
 
 
 //return a MY API KEY from a properties file.
