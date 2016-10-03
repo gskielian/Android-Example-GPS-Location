@@ -94,7 +94,7 @@ public class GpsHelper {
         };
     }
 
-
+//TODO look into creating hysterysis, or number of times max that it can be activated (probably the latter actually)
     public void populateGeofences() {
         customGeoFences.add(new CustomGeoFencesBuilder()
                 .setLocationName("GooglePlex")
