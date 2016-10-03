@@ -19,3 +19,5 @@ afterwards place this in the app level build.gradle:
 and place this in your app whereever you need the key:
 
 `BuildConfig.MY_API_KEY`
+
+make sure add /keys/*  to your .gitignore
