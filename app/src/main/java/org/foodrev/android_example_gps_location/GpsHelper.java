@@ -21,6 +21,7 @@ import java.util.List;
 
 public class GpsHelper {
 
+    private int counter = 0;
     //initialization flag
     private boolean INIT_NOT_DONE = true;
 
@@ -64,35 +65,36 @@ public class GpsHelper {
 
     public void setupGps() {
 
-
-        mLocationManager = (LocationManager) mContext.getSystemService(mContext.LOCATION_SERVICE);
+        if (mLocationManager == null) {
+            mLocationManager = (LocationManager) mContext.getSystemService(mContext.LOCATION_SERVICE);
+        }
         // Define a listener that responds to location updates
-        mLocationListener = new LocationListener() {
-            public void onLocationChanged(Location location) {
+        if (mLocationListener == null) {
+            mLocationListener = new LocationListener() {
+                public void onLocationChanged(Location location) {
 
+                    currentLocation = location;
 
+                    if (INIT_NOT_DONE) {
+                        initializeGeofences();
+                        INIT_NOT_DONE = false;
+                    }
 
-                currentLocation = location;
+                    makeUseOfNewLocation(currentLocation);
 
-                if(INIT_NOT_DONE) {
-                    initializeGeofences();
-                    INIT_NOT_DONE = false;
                 }
 
-                makeUseOfNewLocation(currentLocation);
+                public void onStatusChanged(String provider, int status, Bundle extras) {
+                }
 
-            }
+                public void onProviderEnabled(String provider) {
 
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-            }
+                }
 
-            public void onProviderEnabled(String provider) {
-
-            }
-
-            public void onProviderDisabled(String provider) {
-            }
-        };
+                public void onProviderDisabled(String provider) {
+                }
+            };
+        }
     }
 
 //TODO look into creating hysterysis, or number of times max that it can be activated (probably the latter actually)
@@ -184,10 +186,13 @@ public class GpsHelper {
         LatLng sydney = new LatLng(location.getLatitude(), location.getLongitude());
         mGoogleMap.addMarker(new MarkerOptions().position(sydney).title("Current Location"));
         mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        Toast.makeText(mContext, "new location number"  + String.valueOf(counter++), Toast.LENGTH_SHORT).show();
     }
 
     public void startGpsLogging() {
-        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mLocationListener);
+        long minTimeMilli = 4000;
+        float minDistanceMeters = 2; 
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, minTimeMilli, minDistanceMeters, mLocationListener);
         Toast.makeText(mContext, "started GPS Logging", Toast.LENGTH_SHORT).show();
         this.isLogging = true;
     }
