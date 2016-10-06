@@ -37,6 +37,7 @@ public class GpsHelper {
 
     //context placeholder later passed in from main context
     private Context mContext;
+    private boolean isLogging = false;
 
     public static GpsHelper mGpsHelper = null;
     private GpsHelper(GoogleMap mGoogleMap, Context mContext) {
@@ -188,14 +189,20 @@ public class GpsHelper {
     public void startGpsLogging() {
         mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mLocationListener);
         Toast.makeText(mContext, "started GPS Logging", Toast.LENGTH_SHORT).show();
+        this.isLogging = true;
     }
 
 
     public void stopGpsLogging() {
         mLocationManager.removeUpdates(mLocationListener);
         Toast.makeText(mContext, "stopped GPS Logging", Toast.LENGTH_SHORT).show();
+        this.isLogging = false;
     }
 
+
+    public boolean isGpsLogging() {
+        return isLogging;
+    }
     //TODO
     private void triggerWhenEnter() {
         Toast.makeText(mContext, "entered zone", Toast.LENGTH_SHORT).show();
