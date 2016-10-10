@@ -41,16 +41,17 @@ public class GpsHelper {
     private boolean isLogging = false;
 
     public static GpsHelper mGpsHelper = null;
-
     private GpsHelper(GoogleMap mGoogleMap, Context mContext) {
         this.mGoogleMap = mGoogleMap;
         this.mContext = mContext;
+
 
         this.customGeoFences = new ArrayList<CustomGeoFences>();
         populateGeofences();
 
         setupGps();
         startGpsLogging();
+
     }
 
     public static synchronized GpsHelper getInstance(GoogleMap mGoogleMap, Context mContext) {
@@ -102,14 +103,14 @@ public class GpsHelper {
                 .setLocationName("GooglePlex")
                 .setLatLng(new LatLng(37.4219999,-122.0840575))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(1000)
+                .setTriggerRange(100)
                 .createCustomGeoFences());
 
         customGeoFences.add(new CustomGeoFencesBuilder()
                 .setLocationName("Church")
                 .setLatLng(new LatLng(37.7254374,-122.4100932))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(1000)
+                .setTriggerRange(100)
                 .createCustomGeoFences());
     }
 
@@ -207,16 +208,18 @@ public class GpsHelper {
     public boolean isGpsLogging() {
         return isLogging;
     }
-
-
-
+    //TODO
     private void triggerWhenEnter() {
         Toast.makeText(mContext, "entered zone", Toast.LENGTH_SHORT).show();
     }
 
-
+    //TODO
     private void triggerWhenLeave() {
         Toast.makeText(mContext, "left zone", Toast.LENGTH_SHORT).show();
+    }
+
+
+    private void moveMarker() {
     }
 
 }

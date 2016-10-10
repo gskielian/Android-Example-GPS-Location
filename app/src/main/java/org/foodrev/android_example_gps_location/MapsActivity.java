@@ -1,6 +1,5 @@
 package org.foodrev.android_example_gps_location;
 
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -46,21 +45,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_maps);
+/*
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+*/
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
 
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        Intent i = new Intent(this, GpsService.class);
-        stopService(i);
     }
 
 
@@ -87,8 +81,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             String[] permissions = new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION};
             ActivityCompat.requestPermissions(this, permissions, 1);
         } else {
-            Intent i = new Intent(this, GpsService.class);
-            startService(i);
+            mGpsHelper = GpsHelper.getInstance(mMap, getApplicationContext());
+            mGpsHelper.startGpsLogging();
         }
     }
 
@@ -100,8 +94,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             case 1:
             if (grantResults.length > 0
                     && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                   Intent i = new Intent(this, GpsService.class);
-                   startService(i);
+                mGpsHelper = GpsHelper.getInstance(mMap, getApplicationContext());
+                mGpsHelper.startGpsLogging();
             } else {
 
                 // permission denied, boo! Disable the
@@ -132,18 +126,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    public void onResume() {
-        super.onResume();
-    }
 
     @Override
     public void onPause() {
         super.onPause();
+        mMap = null;
     }
 
     @Override
     public void onStart() {
         super.onStart();
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
 
 
         // ATTENTION: This was auto-generated to implement the App Indexing API.
@@ -157,6 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onStop() {
         super.onStop();
+        mGpsHelper.stopGpsLogging();
         // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         AppIndex.AppIndexApi.end(client, getIndexApiAction());
