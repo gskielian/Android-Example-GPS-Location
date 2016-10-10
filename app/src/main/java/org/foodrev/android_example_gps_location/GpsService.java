@@ -15,14 +15,21 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class GpsService extends Service {
 
+  private static final int RANGE_HYSTERYSIS_BUFFER = 250;
+
+
+    FirebaseDatabase mFirebaseDatabase;
+
+    DatabaseReference mDatabaseReference;
     PowerManager.WakeLock mWakeLock;
-    GoogleMap mGoogleMap;
 
     private boolean INIT_NOT_DONE = true;
 
@@ -40,6 +47,10 @@ public class GpsService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        mDatabaseReference = mFirebaseDatabase.getReference("users/gkielian");
+
         this.customGeoFences = new ArrayList<CustomGeoFences>();
         populateGeofences();
         setupGps();
@@ -111,14 +122,14 @@ public class GpsService extends Service {
                 .setLocationName("GooglePlex")
                 .setLatLng(new LatLng(37.4219999,-122.0840575))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(1000)
+                .setTriggerRange(10000)
                 .createCustomGeoFences());
 
         customGeoFences.add(new CustomGeoFencesBuilder()
                 .setLocationName("Church")
                 .setLatLng(new LatLng(37.7254374,-122.4100932))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(1000)
+                .setTriggerRange(500)
                 .createCustomGeoFences());
     }
     private void initializeGeofences() {
@@ -136,21 +147,27 @@ public class GpsService extends Service {
 
             if (results[0] < customGeoFence.getTriggerRange()) {
                 customGeoFence.setCurrentState("INSIDE");
+                customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
                 Toast.makeText(getApplicationContext(), "currently inside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
             } else {
                 customGeoFence.setCurrentState("OUTSIDE");
                 Toast.makeText(getApplicationContext(), "currently outside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
-
+                customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
             }
         }
     }
+
     private void makeUseOfNewLocation(Location location) {
         loopThroughGeofences(location);
         //LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
         Toast.makeText(getApplicationContext(), "loc "  + String.valueOf(counter++)
                 + " lat " + String.valueOf(location.getLatitude())
                 + " long " + String.valueOf(location.getLongitude()), Toast.LENGTH_SHORT).show();
+        // Write a message to the database
+        mDatabaseReference.child("latitude").setValue(location.getLatitude());
+        mDatabaseReference.child("longitude").setValue(location.getLongitude());
     }
+
     private void loopThroughGeofences(Location currentLocation) {
         float[] results = new float[1];
         String currentStateHolder;

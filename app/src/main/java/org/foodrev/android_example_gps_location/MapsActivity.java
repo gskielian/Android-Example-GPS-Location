@@ -26,8 +26,20 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+    UserLocation mUserLocation;
+    LatLng currentPosition;
+    // Get a reference to our posts
+    FirebaseDatabase mFirebaseDatabase;
+    DatabaseReference mDatabaseReference;
+
     private LocationManager mLocationManager = null;
     private LocationProvider mLocationProvider = null;
     private LocationListener mLocationListener = null;
@@ -50,10 +62,52 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-        // ATTENTION: This was auto-generated to implement the App Indexing API.
+
+               // ATTENTION: This was auto-generated to implement the App Indexing API.
         // See https://g.co/AppIndexing/AndroidStudio for more information.
         client = new GoogleApiClient.Builder(this).addApi(AppIndex.API).build();
+    }
 
+    private void attachFirebaseListener() {
+        mFirebaseDatabase = FirebaseDatabase.getInstance();
+        mDatabaseReference = mFirebaseDatabase.getReference("users/gkielian");
+
+
+        // Attach a listener to read the data at our posts reference
+        mDatabaseReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                mUserLocation = dataSnapshot.getValue(UserLocation.class);
+                currentPosition = new LatLng(mUserLocation.getLatitude(), mUserLocation.getLongitude());
+                mMap.addMarker(new MarkerOptions().position(currentPosition).title("Current Position"));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentPosition, 20.0f));
+
+            }
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                System.out.println("The read failed: " + databaseError.getCode());
+            }
+        });
+
+    }
+
+    public static class UserLocation {
+        public double latitude;
+        public double longitude;
+
+        public UserLocation(){}
+
+        public UserLocation(String latitude, String longitude) {
+            this.latitude = Double.parseDouble(latitude);
+            this.longitude = Double.parseDouble(longitude);
+        }
+
+        public double getLatitude() {
+            return latitude;
+        }
+        public double getLongitude() {
+            return longitude;
+        }
     }
 
     @Override
@@ -71,10 +125,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(sydney,16.f));
 
 
         setupGpsWithPermission();
+        attachFirebaseListener();
     }
 
 
@@ -123,7 +178,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Thing object = new Thing.Builder()
                 .setName("Maps Page") // TODO: Define a title for the content shown.
                 // TODO: Make sure this auto-generated URL is correct.
-                .setUrl(Uri.parse("http://[ENTER-YOUR-URL-HERE]"))
+                .setUrl(Uri.parse("http://www.foodrev.org"))
                 .build();
         return new Action.Builder(Action.TYPE_VIEW)
                 .setObject(object)
