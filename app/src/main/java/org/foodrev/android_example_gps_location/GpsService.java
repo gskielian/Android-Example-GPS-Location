@@ -1,10 +1,14 @@
 package org.foodrev.android_example_gps_location;
 
+import android.app.Service;
 import android.content.Context;
+import android.content.Intent;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.os.PowerManager;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -15,57 +19,64 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Created by magulo on 10/2/16.
- */
+public class GpsService extends Service {
 
-public class GpsHelper {
+    PowerManager.WakeLock mWakeLock;
+    GoogleMap mGoogleMap;
 
-    private int counter = 0;
-    //initialization flag
     private boolean INIT_NOT_DONE = true;
 
-    //ArrayList for our geofence equivalent
     List<CustomGeoFences> customGeoFences;
     Location currentLocation;
 
-    //gps setup related
     private LocationManager mLocationManager = null;
     private LocationListener mLocationListener = null;
 
-    //maps placeholder from main context
-    private GoogleMap mGoogleMap;
+    private int counter = 0;
 
-    //context placeholder later passed in from main context
-    private Context mContext;
-    private boolean isLogging = false;
+    public GpsService() {
+    }
 
-    public static GpsHelper mGpsHelper = null;
-
-    private GpsHelper(GoogleMap mGoogleMap, Context mContext) {
-        this.mGoogleMap = mGoogleMap;
-        this.mContext = mContext;
-
+    @Override
+    public void onCreate() {
+        super.onCreate();
         this.customGeoFences = new ArrayList<CustomGeoFences>();
         populateGeofences();
-
         setupGps();
         startGpsLogging();
+        PowerManager pm = (PowerManager) getSystemService(this.POWER_SERVICE);
+        mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DoNotSleep");
+        mWakeLock.acquire();
     }
 
-    public static synchronized GpsHelper getInstance(GoogleMap mGoogleMap, Context mContext) {
-
-        if(mGpsHelper == null) {
-            mGpsHelper = new GpsHelper(mGoogleMap, mContext);
-        }
-
-        return mGpsHelper;
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stopGpsLogging();
+        mWakeLock.release();
     }
 
-    public void setupGps() {
+    @Override
+    public IBinder onBind(Intent intent) {
+        // TODO: Return the communication channel to the service.
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    public void startGpsLogging() {
+        long minTimeMilli = 4000;
+        float minDistanceMeters = 2;
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, minTimeMilli, minDistanceMeters, mLocationListener);
+        Toast.makeText(getApplicationContext(), "started GPS Logging", Toast.LENGTH_SHORT).show();
+    }
+    public void stopGpsLogging() {
+        mLocationManager.removeUpdates(mLocationListener);
+        Toast.makeText(getApplicationContext(), "stopped GPS Logging", Toast.LENGTH_SHORT).show();
+    }
+
+    private void setupGps() {
 
         if (mLocationManager == null) {
-            mLocationManager = (LocationManager) mContext.getSystemService(mContext.LOCATION_SERVICE);
+            mLocationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
         }
         // Define a listener that responds to location updates
         if (mLocationListener == null) {
@@ -95,9 +106,7 @@ public class GpsHelper {
             };
         }
     }
-
-//TODO look into creating hysterysis, or number of times max that it can be activated (probably the latter actually)
-    public void populateGeofences() {
+    private void populateGeofences() {
         customGeoFences.add(new CustomGeoFencesBuilder()
                 .setLocationName("GooglePlex")
                 .setLatLng(new LatLng(37.4219999,-122.0840575))
@@ -112,8 +121,7 @@ public class GpsHelper {
                 .setTriggerRange(1000)
                 .createCustomGeoFences());
     }
-
-    public void initializeGeofences() {
+    private void initializeGeofences() {
         //set current state to inside or outside
         float[] results = new float[1];
         for (CustomGeoFences customGeoFence : customGeoFences) {
@@ -124,20 +132,26 @@ public class GpsHelper {
                     currentLocation.getLongitude(),
                     results
             );
-            Toast.makeText(mContext, "results: " + String.valueOf(results[0]) + " " +  customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "results: " + String.valueOf(results[0]) + " " +  customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
 
             if (results[0] < customGeoFence.getTriggerRange()) {
                 customGeoFence.setCurrentState("INSIDE");
-                Toast.makeText(mContext, "currently inside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "currently inside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
             } else {
                 customGeoFence.setCurrentState("OUTSIDE");
-                Toast.makeText(mContext, "currently outside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "currently outside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
 
             }
         }
     }
-
-    public void loopThroughGeofences(Location currentLocation) {
+    private void makeUseOfNewLocation(Location location) {
+        loopThroughGeofences(location);
+        //LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+        Toast.makeText(getApplicationContext(), "loc "  + String.valueOf(counter++)
+                + " lat " + String.valueOf(location.getLatitude())
+                + " long " + String.valueOf(location.getLongitude()), Toast.LENGTH_SHORT).show();
+    }
+    private void loopThroughGeofences(Location currentLocation) {
         float[] results = new float[1];
         String currentStateHolder;
         for (CustomGeoFences customGeoFence : customGeoFences) {
@@ -163,14 +177,14 @@ public class GpsHelper {
 
                 switch (customGeoFence.getTriggerType()){
                     case "ENTER":
-                        if (ENTERED_ZONE) Toast.makeText(mContext,"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (ENTERED_ZONE) Toast.makeText(getApplicationContext(),"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         break;
                     case "EXIT":
-                        if (EXITED_ZONE) Toast.makeText(mContext,"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (EXITED_ZONE) Toast.makeText(getApplicationContext(),"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         break;
                     case "ENTER_OR_EXIT":
-                        if (ENTERED_ZONE) Toast.makeText(mContext,"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
-                        if (EXITED_ZONE) Toast.makeText(mContext,"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (ENTERED_ZONE) Toast.makeText(getApplicationContext(),"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (EXITED_ZONE) Toast.makeText(getApplicationContext(),"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         break;
                     default:
                 }
@@ -179,44 +193,4 @@ public class GpsHelper {
         }
 
     }
-
-    private void makeUseOfNewLocation(Location location) {
-        loopThroughGeofences(location);
-        LatLng sydney = new LatLng(location.getLatitude(), location.getLongitude());
-        mGoogleMap.addMarker(new MarkerOptions().position(sydney).title("Current Location"));
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
-        Toast.makeText(mContext, "new location number"  + String.valueOf(counter++), Toast.LENGTH_SHORT).show();
-    }
-
-    public void startGpsLogging() {
-        long minTimeMilli = 4000;
-        float minDistanceMeters = 2; 
-        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, minTimeMilli, minDistanceMeters, mLocationListener);
-        Toast.makeText(mContext, "started GPS Logging", Toast.LENGTH_SHORT).show();
-        this.isLogging = true;
-    }
-
-
-    public void stopGpsLogging() {
-        mLocationManager.removeUpdates(mLocationListener);
-        Toast.makeText(mContext, "stopped GPS Logging", Toast.LENGTH_SHORT).show();
-        this.isLogging = false;
-    }
-
-
-    public boolean isGpsLogging() {
-        return isLogging;
-    }
-
-
-
-    private void triggerWhenEnter() {
-        Toast.makeText(mContext, "entered zone", Toast.LENGTH_SHORT).show();
-    }
-
-
-    private void triggerWhenLeave() {
-        Toast.makeText(mContext, "left zone", Toast.LENGTH_SHORT).show();
-    }
-
 }
