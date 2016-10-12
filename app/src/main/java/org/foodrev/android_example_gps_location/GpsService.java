@@ -23,7 +23,7 @@ import java.util.List;
 
 public class GpsService extends Service {
 
-  private static final int RANGE_HYSTERYSIS_BUFFER = 250;
+  private static final int RANGE_HYSTERYSIS_BUFFER = 100;
 
 
     FirebaseDatabase mFirebaseDatabase;
@@ -122,14 +122,21 @@ public class GpsService extends Service {
                 .setLocationName("GooglePlex")
                 .setLatLng(new LatLng(37.4219999,-122.0840575))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(10000)
+                .setTriggerRange(300)
                 .createCustomGeoFences());
 
         customGeoFences.add(new CustomGeoFencesBuilder()
                 .setLocationName("Church")
                 .setLatLng(new LatLng(37.7254374,-122.4100932))
                 .setTriggerType("ENTER_OR_EXIT")
-                .setTriggerRange(500)
+                .setTriggerRange(300)
+                .createCustomGeoFences());
+
+        customGeoFences.add(new CustomGeoFencesBuilder()
+                .setLocationName("Office")
+                .setLatLng(new LatLng(37.4180015,-122.0754765))
+                .setTriggerType("ENTER_OR_EXIT")
+                .setTriggerRange(300)
                 .createCustomGeoFences());
     }
     private void initializeGeofences() {
@@ -147,12 +154,10 @@ public class GpsService extends Service {
 
             if (results[0] < customGeoFence.getTriggerRange()) {
                 customGeoFence.setCurrentState("INSIDE");
-                customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
                 Toast.makeText(getApplicationContext(), "currently inside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
             } else {
                 customGeoFence.setCurrentState("OUTSIDE");
                 Toast.makeText(getApplicationContext(), "currently outside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
-                customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
             }
         }
     }
@@ -160,9 +165,9 @@ public class GpsService extends Service {
     private void makeUseOfNewLocation(Location location) {
         loopThroughGeofences(location);
         //LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-        Toast.makeText(getApplicationContext(), "loc "  + String.valueOf(counter++)
-                + " lat " + String.valueOf(location.getLatitude())
-                + " long " + String.valueOf(location.getLongitude()), Toast.LENGTH_SHORT).show();
+//        Toast.makeText(getApplicationContext(), "loc "  + String.valueOf(counter++)
+//                + " lat " + String.valueOf(location.getLatitude())
+//                + " long " + String.valueOf(location.getLongitude()), Toast.LENGTH_SHORT).show();
         // Write a message to the database
         mDatabaseReference.child("latitude").setValue(location.getLatitude());
         mDatabaseReference.child("longitude").setValue(location.getLongitude());
@@ -194,14 +199,30 @@ public class GpsService extends Service {
 
                 switch (customGeoFence.getTriggerType()){
                     case "ENTER":
-                        if (ENTERED_ZONE) Toast.makeText(getApplicationContext(),"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (ENTERED_ZONE) {
+                            customGeoFence.setCurrentState("INSIDE");
+                            customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        }
                         break;
                     case "EXIT":
-                        if (EXITED_ZONE) Toast.makeText(getApplicationContext(),"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (ENTERED_ZONE) {
+                            customGeoFence.setCurrentState("OUTSIDE");
+                            customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        }
                         break;
                     case "ENTER_OR_EXIT":
-                        if (ENTERED_ZONE) Toast.makeText(getApplicationContext(),"Entered" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
-                        if (EXITED_ZONE) Toast.makeText(getApplicationContext(),"Exited" + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        if (ENTERED_ZONE) {
+                            customGeoFence.setCurrentState("INSIDE");
+                            customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        }
+                        if (EXITED_ZONE) {
+                            customGeoFence.setCurrentState("OUTSIDE");
+                            customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
+                        }
                         break;
                     default:
                 }
@@ -210,4 +231,5 @@ public class GpsService extends Service {
         }
 
     }
+
 }
