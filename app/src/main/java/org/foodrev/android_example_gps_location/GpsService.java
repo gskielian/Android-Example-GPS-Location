@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.telephony.SmsManager;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -24,6 +25,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+
+import static com.google.android.gms.wearable.DataMap.TAG;
 
 public class GpsService extends Service {
 
@@ -158,9 +161,13 @@ public class GpsService extends Service {
 
             if (results[0] < customGeoFence.getTriggerRange()) {
                 customGeoFence.setCurrentState("INSIDE");
+                sendFirebasePostWithData(customGeoFence.getLocationName(), "started inside perimeter of ");
+                sendSMSWithData(customGeoFence.getLocationName(), "started inside perimeter of ");
                 Toast.makeText(getApplicationContext(), "currently inside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
             } else {
                 customGeoFence.setCurrentState("OUTSIDE");
+                sendFirebasePostWithData(customGeoFence.getLocationName(), "started outside perimeter of ");
+                sendSMSWithData(customGeoFence.getLocationName(), "started outside perimeter of ");
                 Toast.makeText(getApplicationContext(), "currently outside: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
             }
         }
@@ -202,6 +209,7 @@ public class GpsService extends Service {
                         if (ENTERED_ZONE) {
                             customGeoFence.setCurrentState("INSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            sendFirebasePostWithData(customGeoFence.getLocationName(), "entered");
                             sendSMSWithData(customGeoFence.getLocationName(), "entered");
                             Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
@@ -210,6 +218,7 @@ public class GpsService extends Service {
                         if (EXITED_ZONE) {
                             customGeoFence.setCurrentState("OUTSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            sendFirebasePostWithData(customGeoFence.getLocationName(), "exited");
                             sendSMSWithData(customGeoFence.getLocationName(), "exited");
 
                             Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
@@ -219,16 +228,18 @@ public class GpsService extends Service {
                         if (ENTERED_ZONE) {
                             customGeoFence.setCurrentState("INSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            sendFirebasePostWithData(customGeoFence.getLocationName(), "entered");
                             sendSMSWithData(customGeoFence.getLocationName(), "entered");
                             Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
                         if (EXITED_ZONE) {
                             customGeoFence.setCurrentState("OUTSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            sendFirebasePostWithData(customGeoFence.getLocationName(), "exited");
                             sendSMSWithData(customGeoFence.getLocationName(), "exited");
                             Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
-                        break;
+                       break;
                     default:
                 }
             }
@@ -239,15 +250,23 @@ public class GpsService extends Service {
 
 
     private String getDate(){
-        DateFormat df = new SimpleDateFormat("dd MM yyyy, HH:mm");
+        DateFormat df = new SimpleDateFormat("yyyy MM dd MM, HH:mm:ss");
         String date = df.format(Calendar.getInstance().getTime());
         return date;
     }
 
-    private void sendSMSWithData(String location, String update){
-        String message = "Just " + update + " " + location;
+    private void sendSMSWithData(String location, String transition_type){
+        String message = getDate() + ": " + transition_type + " " + location;
         SmsManager sms = SmsManager.getDefault();
-        sms.sendTextMessage("4154652008", null, message, null, null);
+        sms.sendTextMessage(getResources().getString(R.string.test_phone_number), null, message, null, null);
+        Log.d(TAG, "sendSMSWithData:" + message);
+    }
+
+    private void sendFirebasePostWithData(String location, String transition_type){
+        String message = getDate() + ": " + transition_type + " " + location;
+        DatabaseReference newPostRef = mDatabaseReference.child("Logs").push();
+        newPostRef.push().setValue(message);
+        Log.d(TAG, "sendFirebasePostWithData:" + message);
     }
 
 }
