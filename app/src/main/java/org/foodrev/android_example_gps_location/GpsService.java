@@ -9,6 +9,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
+import android.telephony.SmsManager;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -18,12 +19,15 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class GpsService extends Service {
 
-  private static final int RANGE_HYSTERYSIS_BUFFER = 100;
+  private static final int RANGE_HYSTERYSIS_BUFFER = 150;
 
 
     FirebaseDatabase mFirebaseDatabase;
@@ -164,10 +168,6 @@ public class GpsService extends Service {
 
     private void makeUseOfNewLocation(Location location) {
         loopThroughGeofences(location);
-        //LatLng currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
-//        Toast.makeText(getApplicationContext(), "loc "  + String.valueOf(counter++)
-//                + " lat " + String.valueOf(location.getLatitude())
-//                + " long " + String.valueOf(location.getLongitude()), Toast.LENGTH_SHORT).show();
         // Write a message to the database
         mDatabaseReference.child("latitude").setValue(location.getLatitude());
         mDatabaseReference.child("longitude").setValue(location.getLongitude());
@@ -202,13 +202,16 @@ public class GpsService extends Service {
                         if (ENTERED_ZONE) {
                             customGeoFence.setCurrentState("INSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            sendSMSWithData(customGeoFence.getLocationName(), "entered");
                             Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
                         break;
                     case "EXIT":
-                        if (ENTERED_ZONE) {
+                        if (EXITED_ZONE) {
                             customGeoFence.setCurrentState("OUTSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            sendSMSWithData(customGeoFence.getLocationName(), "exited");
+
                             Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
                         break;
@@ -216,11 +219,13 @@ public class GpsService extends Service {
                         if (ENTERED_ZONE) {
                             customGeoFence.setCurrentState("INSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() + RANGE_HYSTERYSIS_BUFFER);
+                            sendSMSWithData(customGeoFence.getLocationName(), "entered");
                             Toast.makeText(getApplicationContext(), "Entered: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
                         if (EXITED_ZONE) {
                             customGeoFence.setCurrentState("OUTSIDE");
                             customGeoFence.setTriggerRange(customGeoFence.getTriggerRange() - RANGE_HYSTERYSIS_BUFFER);
+                            sendSMSWithData(customGeoFence.getLocationName(), "exited");
                             Toast.makeText(getApplicationContext(), "Exited: " + customGeoFence.getLocationName(), Toast.LENGTH_SHORT).show();
                         }
                         break;
@@ -230,6 +235,19 @@ public class GpsService extends Service {
 
         }
 
+    }
+
+
+    private String getDate(){
+        DateFormat df = new SimpleDateFormat("dd MM yyyy, HH:mm");
+        String date = df.format(Calendar.getInstance().getTime());
+        return date;
+    }
+
+    private void sendSMSWithData(String location, String update){
+        String message = "Just " + update + " " + location;
+        SmsManager sms = SmsManager.getDefault();
+        sms.sendTextMessage("4154652008", null, message, null, null);
     }
 
 }

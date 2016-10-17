@@ -1,5 +1,7 @@
 package org.foodrev.android_example_gps_location;
 
+import android.*;
+import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -34,6 +36,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+    private static final int MULTIPLE_PERMISSIONS_REQUEST = 1;
     UserLocation mUserLocation;
     LatLng currentPosition;
     // Get a reference to our posts
@@ -138,13 +141,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         int hasSendGpsPermission = ContextCompat.checkSelfPermission(this,
                 android.Manifest.permission.ACCESS_FINE_LOCATION);
-        if (hasSendGpsPermission != PackageManager.PERMISSION_GRANTED) {
-            String[] permissions = new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION};
-            ActivityCompat.requestPermissions(this, permissions, 1);
+        int hasSendSMSPermission = ContextCompat.checkSelfPermission(this,
+                android.Manifest.permission.SEND_SMS);
+        if (hasSendGpsPermission != PackageManager.PERMISSION_GRANTED || hasSendSMSPermission != PackageManager.PERMISSION_GRANTED ) {
+            String[] permissions = new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.SEND_SMS};
+            ActivityCompat.requestPermissions(this, permissions, MULTIPLE_PERMISSIONS_REQUEST);
         } else {
             Intent i = new Intent(this, GpsService.class);
             startService(i);
         }
+
     }
 
 
@@ -152,9 +158,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                                            String permissions[], int[] grantResults) {
 
         switch (requestCode) {
-            case 1:
-            if (grantResults.length > 0
-                    && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            case MULTIPLE_PERMISSIONS_REQUEST:
+            if (grantResults.length == 2
+                   && grantResults[0] == PackageManager.PERMISSION_GRANTED
+                    && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
+
                    Intent i = new Intent(this, GpsService.class);
                    startService(i);
             } else {
@@ -167,8 +175,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
     }
-
-
 
     /**
      * ATTENTION: This was auto-generated to implement the App Indexing API.

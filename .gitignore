@@ -9,3 +9,4 @@
 /captures
 .externalNativeBuild
 /app/src/debug/res/values/google_maps_api.xml
+/app/src/main/res/values/test_phone_number.xml
